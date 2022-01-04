@@ -12,30 +12,37 @@ const parseCookies = (cookie = "") =>
       return acc;
     }, {});
 
+const session = {};
+
 http
   .createServer(async (req, res) => {
     const cookies = parseCookies(req.headers.cookie);
-
     if (req.url.startsWith("/login")) {
       const { query } = url.parse(req.url);
-      console.log("query", query);
       const { name } = qs.parse(query);
-      console.log("name", name);
       const expires = new Date();
-
       expires.setMinutes(expires.getMinutes() + 5);
+      const uniqueInt = Date.now();
+      session[uniqueInt] = {
+        name,
+        expires,
+      };
+
       res.writeHead(302, {
         Location: "/",
-        "Set-Cookie": `name=${name}; Expires=${expires.toGMTString};HttpOnly;Path=/`,
+        "Set-Cookie": `session=${uniqueInt}; Expires=${expires.toGMTString()}; HttpOnly; Path=/`,
       });
       res.end();
-    } else if (cookies.name) {
+    } else if (
+      cookies.session &&
+      session[cookies.session].expires > new Date()
+    ) {
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end(`${cookies.name}님안녕하세요`);
+      res.end(`${session[cookies.session].name}님 안녕하세요`);
     } else {
       try {
         const data = await fs.readFile("./cookie2.html");
-        res.writeHead(200, { "Content-Type": "text-html; charset=utf-8" });
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         res.end(data);
       } catch (err) {
         res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
@@ -43,6 +50,6 @@ http
       }
     }
   })
-  .listen(8084, () => {
-    console.log("8084번 포트에서 서버 대기 중입니다");
+  .listen(8085, () => {
+    console.log("8085번 포트에서 대기 중입니다!");
   });
